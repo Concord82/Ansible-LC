@@ -1,0 +1,138 @@
+---
+- name: Update the apt package index and install packages
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl 
+      - gnupg 
+      - lsb-release
+    state: present
+    update_cache: true
+  become: true
+
+- name: Create key directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Add Docker’s official GPG key
+  ansible.builtin.apt_key:
+    url: "{{ docker_repo}}{{ ansible_distribution | lower }}/gpg"
+    keyring: /etc/apt/keyrings/docker.gpg
+
+- name: Add apt repo
+  ansible.builtin.apt_repository:
+    repo: deb [arch={{ [ansible_architecture] | map('extract', deb_architecture) | first }} signed-by=/etc/apt/keyrings/docker.gpg ] {{ docker_repo}}{{ ansible_distribution | lower }} {{ ansible_distribution_release | lower }} stable
+    filename: docker
+    state: present
+  become: true
+  when: ansible_os_family == "Debian"
+
+- name: Install Docker Engine
+  ansible.builtin.apt:
+    name:
+      - docker-ce 
+      - docker-ce-cli 
+      - containerd.io 
+      - docker-compose-plugin
+    state: present
+    update_cache: true
+  become: true
+
+# Get current dir for Docker's data files
+- name: Find Docker data directory
+  shell: docker info | grep 'Docker Root Dir'
+  register: docker_data_cur
+  tags:
+    - docker_str
+
+# Strat this block when curent dir diferent set dir
+- name: Move Docker data directory
+  block:
+    # Create new dir
+    - name: Docker data new dir
+      ansible.builtin.file:
+        path: "{{ docker_data_dir }}"
+        state: directory
+        mode: '0755'
+      notify: 
+        - Docker stop service
+
+    - name: Stop docker
+      ansible.builtin.meta: flush_handlers
+
+    #- name: Move data to new directory
+    #  ansible.posix.synchronize:
+    #    src: /var/lib/docker
+    #    dest: "{{ docker_data_dir }}"
+    #    archive: no
+    #  delegate_to: "{{ inventory_hostname }}"
+    #  when: ansible_facts.services['docker.service'].state  == "stopped"
+
+    #- name: Change data
+    #  json_path:
+    #    src: /etc/docker/daemon.json
+    #    operations:
+    #      - op: add
+    #        path: "/data-root"
+    #        value: "{{ docker_data_dir }}"
+
+    - name: Check docker daemon.json file
+      stat:
+        path: /etc/docker/daemon.json
+      register: docker_daemon_json
+
+    - name: Create daemon.json
+      ansible.builtin.template:
+        src: daemon.json.tpl
+        dest: /etc/docker/daemon.json
+        mode: 644
+        group: root
+        owner: root
+      when: not docker_daemon_json.stat.exists
+
+    - name: Update daemon.json
+      ansible.builtin.replace:
+        path: /etc/docker/daemon.json
+        regexp: '^data-root'
+        replace: '"data-root" : "{{ docker_data_dir }}"'
+      when: docker_daemon_json.stat.exists
+
+
+  when: docker_data_dir != docker_data_cur.stdout | split(':') | last | trim 
+
+
+
+
+
+
+#- name: Move Docker data directory
+#  block:
+#    - name: Docker data new dir
+#      ansible.builtin.file:
+#        path: "{{ docker_data_dir }}"
+#        state: directory
+#        mode: '0755'
+#      notify: 
+#        - Docker stop service
+
+#    - name: Stop docker
+#      ansible.builtin.meta: flush_handlers
+
+#    - name: Get docker service state
+#      ansible.builtin.service_facts:
+
+#    - name: Move data to new directory
+#      ansible.posix.synchronize:
+#        src: /var/lib/docker
+#        dest: "{{ docker_data_dir }}"
+#        archive: no
+#      delegate_to: "{{ inventory_hostname }}"
+#      when: ansible_facts.services['docker.service'].state  == "stopped"
+
+      
+
+#  when: docker_data_dir != "/var/lib/docker"
+
+  

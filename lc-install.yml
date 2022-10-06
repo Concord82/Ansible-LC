@@ -1,0 +1,6 @@
+---
+- name: Install Login Center
+  hosts:
+    - login_center
+  roles:
+    - lc-docker

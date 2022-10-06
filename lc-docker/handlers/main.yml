@@ -1,0 +1,10 @@
+---
+# handlers file for lc-docker
+
+- name: Docker stop service
+  ansible.builtin.service:
+    name: docker
+    state: stopped
+  register: docker_state
+
+
