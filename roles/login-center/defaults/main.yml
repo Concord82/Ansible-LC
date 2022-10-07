@@ -1,0 +1,24 @@
+---
+distr : 
+  1.1.9:
+    url: "https://nextcloud.optimacros.com/s/7pM7czyJtCZaJHx/download/login-center-1.6.0.2.sh"
+  1.6.0.2:
+    url: "https://nextcloud.optimacros.com/s/7pM7czyJtCZaJHx/download/login-center-1.6.0.2.sh"
+  1.6.0.3:
+    url: "https://nextcloud.optimacros.com/s/8JkBrDfTj4aa22k/download/login-center-1.6.0.3.sh"
+
+
+
+
+# defaults file for login-center
+login_center_path : /opt/login-center
+
+version : 1.1.9
+hostname: profile.optimacros.com
+db_username: login-center
+db_password: PWLSp7JsBd7up6BehnyYkJzY
+admin_username: admin@optimacros.com
+admin_password: 5sBndJWww6gQa2G7sLFnTEP7
+workspace_name: workspace1
+workspace_hostname: workspace1.optimacros.com
+use_proxy: true
