@@ -7,4 +7,7 @@
     state: stopped
   register: docker_state
 
-
+- name: Docker start service
+  ansible.builtin.service:
+    name: docker
+    state: started
