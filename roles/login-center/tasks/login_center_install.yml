@@ -7,6 +7,7 @@
     group: root
     mode: "0755"
 
+
 - name: Create env file
   ansible.builtin.template:
     src: env_file.tpl
@@ -15,30 +16,34 @@
     group: root
     mode: "0640"
 
+
 - name: test
   ansible.builtin.debug:
     msg: "{{ distr[version].url }}"
 
-# - name: Download distrib login center's
-#   ansible.builtin.get_url:
-#     url: "{{ distr[version].url }}"
-#     dest: "{{ login_center_path }}/../"
-#     mode: "0750"
-#   async: 1000
-#   poll: 0
-#   register: get_distr_status
 
-# - name: test
-#   ansible.builtin.debug:
-#     msg: "{{ get_distr_status }}"
+- name: Download distrib login center's
+  ansible.builtin.get_url:
+    url: "{{ distr[version].url }}"
+    dest: "{{ login_center_path }}/../"
+    mode: "0750"
+  async: 1000
+  poll: 0
+  register: get_distr_status
 
-# - name: Check status get distrib
-#   ansible.builtin.async_status:
-#     jid: "{{ get_distr_status.ansible_job_id }}"
-#   register: get_distr_status_result
-#   until: get_distr_status_result.finished
-#   delay: 5
-#   retries: 100
+
+- name: test
+  ansible.builtin.debug:
+    msg: "{{ get_distr_status }}"
+
+
+- name: Check status get distrib
+  ansible.builtin.async_status:
+    jid: "{{ get_distr_status.ansible_job_id }}"
+  register: get_distr_status_result
+  until: get_distr_status_result.finished
+  delay: 5
+  retries: 100
 
 
 - name: Create NGINX dir
@@ -52,6 +57,7 @@
     - "nginx/conf"
     - "nginx/cert"
 
+
 - name: copy conf file
   ansible.builtin.copy:
     src: "{{ item }}"
@@ -62,6 +68,7 @@
     - ws8080.conf.template
     - ws8081.conf.template
 
+
 # gen self signet certs
 - name: Generate an OpenSSL private key
   openssl_privatekey:
@@ -69,6 +76,7 @@
     size: 4096
     type: "RSA"
     backup: yes
+
 
 - name: Generate an OpenSSL Certificate Signing Request with Subject information
   openssl_csr:
@@ -86,18 +94,3 @@
     privatekey_path: "{{ login_center_path }}/data/nginx/cert/crt.key"
     csr_path: "{{ login_center_path }}/data/nginx/cert/crt.csr"
     provider: selfsigned
-
-
-
-
-
-# - name: create key file
-#   openssl_certificate:
-#     path: "{{ login_center_path }}/data/nginx/cert/bundle.crt"
-#     privatekey_path: "{{ login_center_path }}/data/nginx/cert/crt.key"
-#     csr_path: "{{ login_center_path }}/data/nginx/cert/crt.csr"
-#     provider: selfsigned
-#     #subject: "{{ hostname }}"
-#     #subject_alt_name: "www.{{ hostname }}"
-
-
