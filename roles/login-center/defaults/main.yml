@@ -22,3 +22,14 @@ admin_password: 5sBndJWww6gQa2G7sLFnTEP7
 workspace_name: workspace1
 workspace_hostname: workspace1.optimacros.com
 use_proxy: true
+
+# cert config
+country_name : RU
+organization_name: optimacros
+email_address: admin@optimacros.com
+
+
+
+
+
+
