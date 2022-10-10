@@ -23,6 +23,9 @@ workspace_name: workspace1
 workspace_hostname: workspace1.optimacros.com
 use_proxy: true
 
+# if don't set will use self sign cert
+self_signed_cert: True
+
 # cert config
 country_name : RU
 organization_name: optimacros

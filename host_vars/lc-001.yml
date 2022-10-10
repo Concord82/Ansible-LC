@@ -1,1 +1,10 @@
+
+
 docker_data_dir : /opt/docker
+
+
+
+hostname: lc-001.optimacros.com
+
+self_signed_cert: False
+

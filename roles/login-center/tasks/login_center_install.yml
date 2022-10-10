@@ -7,7 +7,6 @@
     group: root
     mode: "0755"
 
-
 - name: Create env file
   ansible.builtin.template:
     src: env_file.tpl
@@ -16,35 +15,30 @@
     group: root
     mode: "0640"
 
-
 - name: test
   ansible.builtin.debug:
     msg: "{{ distr[version].url }}"
 
+# - name: Download distrib login center's
+#   ansible.builtin.get_url:
+#     url: "{{ distr[version].url }}"
+#     dest: "{{ login_center_path }}/../"
+#     mode: "0750"
+#   async: 1000
+#   poll: 0
+#   register: get_distr_status
 
-- name: Download distrib login center's
-  ansible.builtin.get_url:
-    url: "{{ distr[version].url }}"
-    dest: "{{ login_center_path }}/../"
-    mode: "0750"
-  async: 1000
-  poll: 0
-  register: get_distr_status
+# - name: test
+#   ansible.builtin.debug:
+#     msg: "{{ get_distr_status }}"
 
-
-- name: test
-  ansible.builtin.debug:
-    msg: "{{ get_distr_status }}"
-
-
-- name: Check status get distrib
-  ansible.builtin.async_status:
-    jid: "{{ get_distr_status.ansible_job_id }}"
-  register: get_distr_status_result
-  until: get_distr_status_result.finished
-  delay: 5
-  retries: 100
-
+# - name: Check status get distrib
+#   ansible.builtin.async_status:
+#     jid: "{{ get_distr_status.ansible_job_id }}"
+#   register: get_distr_status_result
+#   until: get_distr_status_result.finished
+#   delay: 5
+#   retries: 100
 
 - name: Create NGINX dir
   ansible.builtin.file:
@@ -57,7 +51,6 @@
     - "nginx/conf"
     - "nginx/cert"
 
-
 - name: copy conf file
   ansible.builtin.copy:
     src: "{{ item }}"
@@ -68,29 +61,54 @@
     - ws8080.conf.template
     - ws8081.conf.template
 
+- name: Install self signed SSL certs
+  block:
+    # gen self signet certs
+    - name: Generate an OpenSSL private key
+      openssl_privatekey:
+        path: "{{ login_center_path }}/data/nginx/cert/crt.key"
+        size: 4096
+        type: "RSA"
+        backup: yes
 
-# gen self signet certs
-- name: Generate an OpenSSL private key
-  openssl_privatekey:
-    path: "{{ login_center_path }}/data/nginx/cert/crt.key"
-    size: 4096
-    type: "RSA"
-    backup: yes
+    - name: Generate an OpenSSL Certificate Signing Request with Subject information
+      openssl_csr:
+        path: "{{ login_center_path }}/data/nginx/cert/crt.csr"
+        privatekey_path: "{{ login_center_path }}/data/nginx/cert/crt.key"
+        country_name: "{{ country_name  }}"
+        organization_name: "{{ organization_name }}"
+        email_address: "{{ email_address }}"
+        common_name: "{{ hostname }}"
 
+    - name: Generate a Self Signed OpenSSL certificate
+      openssl_certificate:
+        path: "{{ login_center_path }}/data/nginx/cert/bundle.crt"
+        privatekey_path: "{{ login_center_path }}/data/nginx/cert/crt.key"
+        csr_path: "{{ login_center_path }}/data/nginx/cert/crt.csr"
+        provider: selfsigned
+  when: self_signed_cert
 
-- name: Generate an OpenSSL Certificate Signing Request with Subject information
-  openssl_csr:
-    path: "{{ login_center_path }}/data/nginx/cert/crt.csr"
-    privatekey_path: "{{ login_center_path }}/data/nginx/cert/crt.key"
-    country_name: "{{ country_name  }}"
-    organization_name: "{{ organization_name }}"
-    email_address: "{{ email_address }}"
-    common_name: "{{ hostname }}"
+- name: Install external SSL certs
+  block:
+    - name: Get external cert and ley for copy
+      ansible.builtin.include_vars:
+        file: "{{ hostname }}.yml"
+        name: certs
 
+    - name: install SSL private key
+      ansible.builtin.copy:
+        content: "{{ certs.content_ssl_key }}"
+        dest: "{{ login_center_path }}/data/nginx/cert/crt.key"
+        owner: root
+        group: root
+        mode: 0600
 
-- name: Generate a Self Signed OpenSSL certificate
-  openssl_certificate:
-    path: "{{ login_center_path }}/data/nginx/cert/bundle.crt"
-    privatekey_path: "{{ login_center_path }}/data/nginx/cert/crt.key"
-    csr_path: "{{ login_center_path }}/data/nginx/cert/crt.csr"
-    provider: selfsigned
+    - name: install SSL certs
+      ansible.builtin.copy:
+        content: "{{ certs.content_ssl_crt }}"
+        dest: "{{ login_center_path }}/data/nginx/cert/bundle.crt"
+        owner: root
+        group: root
+        mode: 0644
+
+  when: not self_signed_cert

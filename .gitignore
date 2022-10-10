@@ -1,0 +1,5 @@
+vault_pass.txt
+
+tools/*
+!tools/example.*
+!tools/*.py
