@@ -1,4 +1,4 @@
-VERSION=1.1.9
+VERSION={{ version }}
 HOSTNAME={{ hostname }}
 DB_USERNAME={{ db_username }}
 DB_PASSWORD={{ db_password }}
