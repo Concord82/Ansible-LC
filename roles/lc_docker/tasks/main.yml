@@ -1,0 +1,6 @@
+---
+# tasks file for lc-docker
+- name: Install docker select
+  ansible.builtin.include_tasks:
+    file: debian.yml
+  when: ansible_os_family == "Debian"

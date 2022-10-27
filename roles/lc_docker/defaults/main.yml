@@ -2,11 +2,11 @@
 # defaults file for lc-docker
 deb_architecture: {
   "aarch64": "arm64",
-  "x86_64" : "amd64"
-  }
+  "x86_64": "amd64"
+}
 
 # docker repo  link
-docker_repo       : https://download.docker.com/linux/
+docker_repo: https://download.docker.com/linux/
 
 # Docker data files place on default
-docker_data_dir : /var/lib/docker
+docker_data_dir: /var/lib/docker

@@ -19,12 +19,15 @@
 
 - name: Add Docker's official GPG key
   ansible.builtin.apt_key:
-    url: "{{ docker_repo}}{{ ansible_distribution | lower }}/gpg"
+    url: "{{ docker_repo }}{{ ansible_distribution | lower }}/gpg"
     keyring: /etc/apt/keyrings/docker.gpg
 
 - name: Add apt repo
   ansible.builtin.apt_repository:
-    repo: deb [arch={{ [ansible_architecture] | map('extract', deb_architecture) | first }} signed-by=/etc/apt/keyrings/docker.gpg ] {{ docker_repo}}{{ ansible_distribution | lower }} {{ ansible_distribution_release | lower }} stable
+    repo: >
+      deb [arch={{ [ansible_architecture] | map('extract', deb_architecture) | first }}
+      signed-by=/etc/apt/keyrings/docker.gpg ] {{ docker_repo }}{{ ansible_distribution | lower }}
+      {{ ansible_distribution_release | lower }} stable
     filename: docker
     state: present
   become: true
@@ -43,10 +46,11 @@
 
 # Get current dir for Docker's data files
 - name: Find Docker data directory
-  shell: docker info | grep 'Docker Root Dir'
+  ansible.builtin.command: docker info | grep 'Docker Root Dir'
   register: docker_data_cur
   tags:
     - docker_str
+  changed_when: docker_data_cur.rc != 0
 
 - name: Check state docker data directory
   ansible.builtin.stat:
@@ -55,6 +59,9 @@
 
 # Strat this block when curent dir diferent set dir
 - name: Move Docker data directory
+  when: docker_data_dir != docker_data_cur.stdout | split(':') | last | trim
+  notify:
+    - Docker start service
   block:
     # Create new dir
     - name: Docker data new dir
@@ -69,7 +76,7 @@
       ansible.builtin.meta: flush_handlers
 
     - name: Check docker daemon.json file
-      stat:
+      ansible.builtin.stat:
         path: /etc/docker/daemon.json
       register: docker_daemon_json
 
@@ -77,7 +84,7 @@
       ansible.builtin.template:
         src: daemon.json.tpl
         dest: /etc/docker/daemon.json
-        mode: 644
+        mode: '0644'
         group: root
         owner: root
       when: not docker_daemon_json.stat.exists
@@ -97,7 +104,3 @@
     #   ansible.builtin.file:
     #     path: "{{ docker_data_cur.stdout | split(':') | last | trim }}"
     #     state: absent
-
-  when: docker_data_dir != docker_data_cur.stdout | split(':') | last | trim
-  notify:
-    - Docker start service
