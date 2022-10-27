@@ -1,9 +1,9 @@
 ---
 # tasks file for login-center
 
-- name: Check install login-center
+- name: Check install login-center when .env exist
   ansible.builtin.stat:
-    path: "{{ login_center_path }}"
+    path: "{{ login_center_path }}/login-center/.env"
   register: login_center_path_state
 
 - name: Install login center
@@ -11,24 +11,24 @@
   when: not login_center_path_state.stat.exists
 
 - name: Check version login-center
+  when: login_center_path_state.stat.exists
   block:
-    - name: get remote emv file
+    - name: Get remote emv file
       ansible.builtin.slurp:
-        path: "{{ login_center_path }}/.env"
+        path: "{{ login_center_path }}/login-center/.env"
       register: env_file_content
 
     - name: Decode enf file
       ansible.builtin.set_fact:
         env_file: "{{ env_file_content['content'] | b64decode }}"
 
-    - name: get current version login-center
+    - name: Get current version login-center
       ansible.builtin.set_fact:
         login_center_version: "{{ env_file.split('\n')[0].split('=')[1] }}"
 
-    - name: update login-center
+    - name: Update login-center
       ansible.builtin.include_tasks: login_center_update.yml
       when: version != login_center_version
-  when: login_center_path_state.stat.exists
 
 # temp. For test install role
 - name: Install login center

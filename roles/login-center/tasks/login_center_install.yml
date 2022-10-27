@@ -1,114 +1,143 @@
 ---
 - name: Create directory structure
   ansible.builtin.file:
-    path: "{{ login_center_path }}"
+  # проверяем и при необходимости создаем каталог для логин центра
+    path: "{{ login_center_path }}/{{ item }}"
     state: directory
     owner: root
     group: root
     mode: "0755"
+  loop:
+    - login-center
+    - login-center-install
+    - login-center-backup
 
 - name: Create env file
   ansible.builtin.template:
+  # по шаблону формируем .env файл для логин центра
     src: env_file.tpl
-    dest: "{{ login_center_path }}/.env"
+    dest: "{{ login_center_path }}/login-center/.env"
     owner: root
     group: root
     mode: "0640"
 
-- name: test
-  ansible.builtin.debug:
-    msg: "{{ distr[version].url }}"
-
 # - name: Download distrib login center's
 #   ansible.builtin.get_url:
+#   # скачиваем дистрибутив заданной версии
 #     url: "{{ distr[version].url }}"
-#     dest: "{{ login_center_path }}/../"
+#     dest: "{{ login_center_path }}/login-center-install/"
 #     mode: "0750"
 #   async: 1000
 #   poll: 0
 #   register: get_distr_status
 
-# - name: test
-#   ansible.builtin.debug:
-#     msg: "{{ get_distr_status }}"
-
 # - name: Check status get distrib
+#   # костыль что бы видеть что скачка идет
 #   ansible.builtin.async_status:
 #     jid: "{{ get_distr_status.ansible_job_id }}"
 #   register: get_distr_status_result
 #   until: get_distr_status_result.finished
 #   delay: 5
-#   retries: 100
+#   retries: 200
 
+# настройка nginx
 - name: Create NGINX dir
   ansible.builtin.file:
-    path: "{{ login_center_path }}/data/{{ item }}"
+  # создаем каталоги для шаблонов и сертификатов
+    path: "{{ login_center_path }}/login-center/data/nginx/{{ item }}"
     state: directory
     owner: root
     group: root
     mode: "0755"
   loop:
-    - "nginx/conf"
-    - "nginx/cert"
+    - "conf"
+    - "cert"
 
-- name: copy conf file
+- name: Copy conf file
+  # копируем шаблоны
+  when: use_proxy
   ansible.builtin.copy:
     src: "{{ item }}"
-    dest: "{{ login_center_path }}/data/nginx/conf/{{ item }}"
+    dest: "{{ login_center_path }}/login-center/data/nginx/templates/{{ item }}"
+    mode: '0644'
   loop:
     - ws80.conf.template
     - ws443.conf.template
-    - ws8080.conf.template
-    - ws8081.conf.template
 
-- name: Install self signed SSL certs
+
+# два блока связанных с переменной self_signed_cert
+# если заданна мы выпускаем самоподписанные сертификаты сервера
+- name: Install self signed SSL certs for
+  when: self_signed_cert
   block:
-    # gen self signet certs
     - name: Generate an OpenSSL private key
-      openssl_privatekey:
-        path: "{{ login_center_path }}/data/nginx/cert/crt.key"
+      community.crypto.openssl_privatekey:
+      # генерируем приватный ключ
+        path: "{{ login_center_path }}/login-center/data/nginx/cert/crt.key"
         size: 4096
         type: "RSA"
-        backup: yes
+        backup: true
 
     - name: Generate an OpenSSL Certificate Signing Request with Subject information
-      openssl_csr:
-        path: "{{ login_center_path }}/data/nginx/cert/crt.csr"
-        privatekey_path: "{{ login_center_path }}/data/nginx/cert/crt.key"
-        country_name: "{{ country_name  }}"
+      community.crypto.openssl_csr:
+      # формируем запрос на сертификат
+        path: "{{ login_center_path }}/login-center/data/nginx/cert/crt.csr"
+        privatekey_path: "{{ login_center_path }}/login-center/data/nginx/cert/crt.key"
+        country_name: "{{ country_name }}"
         organization_name: "{{ organization_name }}"
         email_address: "{{ email_address }}"
         common_name: "{{ hostname }}"
 
     - name: Generate a Self Signed OpenSSL certificate
-      openssl_certificate:
-        path: "{{ login_center_path }}/data/nginx/cert/bundle.crt"
-        privatekey_path: "{{ login_center_path }}/data/nginx/cert/crt.key"
-        csr_path: "{{ login_center_path }}/data/nginx/cert/crt.csr"
+      community.crypto.x509_certificate:
+      # выпускаем сертификат
+        path: "{{ login_center_path }}/login-center/data/nginx/cert/bundle.crt"
+        privatekey_path: "{{ login_center_path }}/login-center/data/nginx/cert/crt.key"
+        csr_path: "{{ login_center_path }}/login-center/data/nginx/cert/crt.csr"
         provider: selfsigned
-  when: self_signed_cert
 
+# если переменная стоит false используем сертификат заданный в переменных
 - name: Install external SSL certs
+  when: not self_signed_cert
   block:
     - name: Get external cert and ley for copy
       ansible.builtin.include_vars:
+      # Решение ацтой. После перенести в переменные хоста и шифровать их.
         file: "{{ hostname }}.yml"
         name: certs
 
-    - name: install SSL private key
+    - name: Install SSL private key
       ansible.builtin.copy:
+      # копируем содержимое переменной content_ssl_key в файл закрытого ключа
         content: "{{ certs.content_ssl_key }}"
-        dest: "{{ login_center_path }}/data/nginx/cert/crt.key"
+        dest: "{{ login_center_path }}/login-center/data/nginx/cert/crt.key"
         owner: root
         group: root
         mode: 0600
 
-    - name: install SSL certs
+    - name: Install SSL certs
       ansible.builtin.copy:
+      # переменная content_ssl_crt в файл сертификата
         content: "{{ certs.content_ssl_crt }}"
-        dest: "{{ login_center_path }}/data/nginx/cert/bundle.crt"
+        dest: "{{ login_center_path }}/login-center/data/nginx/cert/bundle.crt"
         owner: root
         group: root
         mode: 0644
 
-  when: not self_signed_cert
+# получаем текущее время для использования в именах лог файлов
+- name: Get current timestamp
+  ansible.builtin.command: "date +%Y-%m-%d_%H.%M.%S"
+  register: tstamp
+  changed_when: tstamp.rc != 0
+
+- name: Start install LC
+  ansible.builtin.command: "./login-center-{{ version }}.sh -- -o -d {{ login_center_path }}/login-center > {{ tstamp.stdout }}_install_log.txt"
+  args:
+    chdir: "{{ login_center_path }}/login-center-install"
+  register: result
+  become: true
+  changed_when: result.rc != 0
+
+- name: Test
+  ansible.builtin.debug:
+    msg: "{{ result.stdout_lines }}"

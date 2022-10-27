@@ -1,19 +1,16 @@
 ---
-distr : 
-  1.1.9:
-    url: "https://nextcloud.optimacros.com/s/7pM7czyJtCZaJHx/download/login-center-1.6.0.2.sh"
+distr:
+  1.6.0.1:
+    url: "https://nextcloud.optimacros.com/s/GxF3fT8j6xdrnjd/download/login-center-1.6.0.1.sh"
   1.6.0.2:
-    url: "https://nextcloud.optimacros.com/s/7pM7czyJtCZaJHx/download/login-center-1.6.0.2.sh"
+    url: "https://nextcloud.optimacros.com/s/moxf7RbXiSFkdjz/download/login-center-1.6.0.2.sh"
   1.6.0.3:
-    url: "https://nextcloud.optimacros.com/s/8JkBrDfTj4aa22k/download/login-center-1.6.0.3.sh"
+    url: "https://nextcloud.optimacros.com/s/9CqHkQZefPT9yLY/download/login-center-1.6.0.3.sh"
 
+# defaults path for login-center
+login_center_path: /opt
 
-
-
-# defaults file for login-center
-login_center_path : /opt/login-center
-
-version : 1.1.9
+version: 1.6.0.2
 hostname: profile.optimacros.com
 db_username: login-center
 db_password: PWLSp7JsBd7up6BehnyYkJzY
@@ -24,15 +21,9 @@ workspace_hostname: workspace1.optimacros.com
 use_proxy: true
 
 # if don't set will use self sign cert
-self_signed_cert: True
+self_signed_cert: true
 
 # cert config
-country_name : RU
+country_name: RU
 organization_name: optimacros
 email_address: admin@optimacros.com
-
-
-
-
-
-
