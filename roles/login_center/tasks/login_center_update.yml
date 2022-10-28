@@ -26,3 +26,34 @@
 - name: Task 3.4.4 Backup login center
   ansible.builtin.include_tasks: login_center_backup.yml
   when: lc_backup > 0
+
+- name: Task 3.4.5. Download new version login center
+  ansible.builtin.get_url:
+  # скачиваем дистрибутив заданной версии
+    url: "{{ distr[version].url }}"
+    dest: "{{ login_center_path }}/login-center-install/"
+    mode: "0750"
+  async: 1000
+  poll: 0
+  register: get_distr_status
+
+- name: Task 3.4.6 Check status get distrib
+  # костыль что бы видеть что скачка идет
+  ansible.builtin.async_status:
+    jid: "{{ get_distr_status.ansible_job_id }}"
+  register: get_distr_status_result
+  until: get_distr_status_result.finished
+  delay: 5
+  retries: 200
+
+- name: Task 3.4.7 Start install LC
+  ansible.builtin.command: "./login-center-{{ version }}.sh -- -o -d {{ login_center_path }}/login-center > {{ tstamp.stdout }}_install_log.txt"
+  args:
+    chdir: "{{ login_center_path }}/login-center-install"
+  register: result
+  become: true
+  changed_when: result.rc != 0
+
+- name: Task 3.4.8 Test
+  ansible.builtin.debug:
+    msg: "{{ result.stdout_lines }}"
