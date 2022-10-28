@@ -1,0 +1,51 @@
+---
+- name: Task 1 Check path login-center-backup
+  ansible.builtin.file:
+  # проверяем и при необходимости создаем каталог для логин центра
+    path: "{{ login_center_path }}/login-center-backup"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Task 2 Stop logincenter
+  ansible.builtin.shell: "./om stop"
+  args:
+    executable: /bin/bash
+    chdir: "{{ login_center_path }}/login-center"
+  register: stop_logincenter_srdout
+  become: true
+  changed_when: stop_logincenter_srdout.rc != 0
+
+- name: Task 3. Create backup
+  community.general.archive:
+    path: "{{ login_center_path }}/login-center"
+    dest: "{{ login_center_path }}/login-center-backup/lc-backup-{{ tstamp.stdout }}.tar.gz"
+    mode: '0600'
+
+- name: Find backup files
+  ansible.builtin.find:
+    path: "{{ login_center_path }}/login-center-backup"
+    file_type: file
+    patterns:
+      - "lc-backup-*.tar.gz"
+  register: backup_files
+
+- name: Sort file list
+  ansible.builtin.set_fact:
+    remove_files: "{{ backup_files.files | sort(attribute='ctime') | map(attribute='path') | list }}"
+
+- name: Remove old backups
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ remove_files[:-lc_backup] }}"
+
+- name: Task 2 Start logincenter
+  ansible.builtin.shell: "./om start"
+  args:
+    executable: /bin/bash
+    chdir: "{{ login_center_path }}/login-center"
+  register: stop_logincenter_srdout
+  become: true
+  changed_when: stop_logincenter_srdout.rc != 0

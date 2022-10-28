@@ -1,0 +1,28 @@
+---
+- name: Task 3.4.1 Check workspace present  path workspace
+  ansible.builtin.stat:
+    path: "{{ login_center_path }}/workspace"
+  register: workspace_path
+
+- name: Task 3.4.2 Check workspace present path workspace1
+  ansible.builtin.stat:
+    path: "{{ login_center_path }}/workspace1"
+  register: workspace1_path
+
+
+- name: Task 3.4.3 Stop playbook
+  when: workspace_path.stat.exists or workspace1_path.stat.exists
+  block:
+    - name: Message
+      ansible.builtin.debug:
+        msg:
+          - "---------------------------------------------------"
+          - " Don't use this playbook when you use login-center "
+          - "        and workspace instaled on one host         "
+          - "---------------------------------------------------"
+    - name: Exit
+      ansible.builtin.meta: end_host
+
+- name: Task 3.4.4 Backup login center
+  ansible.builtin.include_tasks: login_center_backup.yml
+  when: lc_backup > 0

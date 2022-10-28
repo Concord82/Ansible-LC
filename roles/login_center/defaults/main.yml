@@ -27,3 +27,7 @@ self_signed_cert: true
 country_name: RU
 organization_name: optimacros
 email_address: admin@optimacros.com
+
+# set number last backup files
+# set 0 for don't create backup
+lc_backup: 3

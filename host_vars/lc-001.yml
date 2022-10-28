@@ -6,3 +6,9 @@ hostname: lc-001.optimacros.com
 self_signed_cert: false
 
 use_proxy: false
+
+login_center_path: /opt
+
+version: 1.6.0.3
+
+lc_backup: 3

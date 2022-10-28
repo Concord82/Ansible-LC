@@ -124,6 +124,7 @@
         group: root
         mode: 0644
 
+# <-------- REMOVE THIS after move to main
 # получаем текущее время для использования в именах лог файлов
 - name: Get current timestamp
   ansible.builtin.command: "date +%Y-%m-%d_%H.%M.%S"

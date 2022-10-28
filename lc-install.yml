@@ -3,7 +3,7 @@
   hosts:
     - login_center
   roles:
-    - role: lc-docker
-    - role: login-center
+    - role: lc_docker
+    - role: login_center
       tags:
         - test
