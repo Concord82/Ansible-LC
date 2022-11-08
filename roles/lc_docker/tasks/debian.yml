@@ -46,7 +46,11 @@
 
 # Get current dir for Docker's data files
 - name: Find Docker data directory
-  ansible.builtin.command: docker info | grep 'Docker Root Dir'
+  ansible.builtin.shell: |
+    set -o pipefail
+    docker info | grep 'Docker Root Dir'
+  args:
+    executable: /usr/bin/bash
   register: docker_data_cur
   tags:
     - docker_str
@@ -57,7 +61,7 @@
     path: "{{ docker_data_cur.stdout | split(':') | last | trim }}"
   register: docker_data_cur_state
 
-# Strat this block when curent dir diferent set dir
+# Start this block when curent dir diferent set dir
 - name: Move Docker data directory
   when: docker_data_dir != docker_data_cur.stdout | split(':') | last | trim
   notify:
@@ -99,8 +103,3 @@
     - name: Move old data dir
       ansible.builtin.command: "mv {{ docker_data_cur.stdout | split(':') | last | trim }} {{ docker_data_cur.stdout | split(':') | last | trim }}.old  "
       when: docker_data_cur_state.stat.exists
-
-    # - name: Remove old data dir
-    #   ansible.builtin.file:
-    #     path: "{{ docker_data_cur.stdout | split(':') | last | trim }}"
-    #     state: absent
